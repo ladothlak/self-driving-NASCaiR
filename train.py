@@ -17,8 +17,10 @@ MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 DIMS = [224, 224]
 SEQUENCE_LENGTH = 15
+#Latest training was with BATCH_SIZE = 24
+BATCH_SIZE = 128
 LSTM_INPUT = 6
-EPOCHS = 5
+EPOCHS = 15
 
 params_model={
         "num_classes": 4,
@@ -28,8 +30,10 @@ params_model={
         "rnn_hidden_size": 200,}
 
 MODEL = Resnt18Rnn(params_model).train()
-CRITERION = nn.MSELoss()
+CRITERION = nn.BCEWithLogitsLoss()
 OPTIMIZER = optim.Adam(MODEL.parameters(), lr=1e-4)
+
+device = torch.device('cuda')
 
 ## Load in recordings of videos and inputs ##
 
@@ -54,7 +58,7 @@ full_transform = transforms.Compose([
         ])
 
 #Create training dataset
-train_ds = VideoDataset(img_directories, label_directories, full_transform, SEQUENCE_LENGTH)
+train_ds = VideoDataset(img_directories, label_directories, full_transform, 4)
 
 #Put the data in dataloaders
 def collate_fn_rnn(batch):
@@ -65,24 +69,26 @@ def collate_fn_rnn(batch):
     labels_tensor = torch.stack(label_batch)
     return imgs_tensor, labels_tensor
 
-train_dl = torch.utils.data.DataLoader(train_ds, batch_size=1,
-                          shuffle=True, collate_fn=collate_fn_rnn)
+train_dl = torch.utils.data.DataLoader(train_ds, batch_size=BATCH_SIZE,
+                          shuffle=True, collate_fn=collate_fn_rnn,
+                          pin_memory=True)
 
 #Define the training loop
 def train(model, epochs, loss_fn, optimizer, train_loader):
     #Train that bad boy
     loss_history = []
     
-    model.cuda()
+    model.to(device, non_blocking=True)
     model.train()
     
     for epoch in range(1,epochs+1):
+        start_epoch = time()
         print(f'Epoch {epoch}')
         
         for batch, (x,y) in enumerate(train_loader):
             
-            x = x.cuda()
-            y = (y.type(torch.FloatTensor).cuda())
+            x = x.to(device, non_blocking=True)
+            y = (y.type(torch.FloatTensor).to(device, non_blocking=True))
             
             model.zero_grad()
             
@@ -96,6 +102,10 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             
             loss_history.append(loss.data.item())
             
+            if batch%20 == 0:
+                print(batch)
+            
+        print(f'Epoch time: {time()-start_epoch}')
         print(f'Average batch error: {round(np.mean(loss_history), 5)}')
         loss_history = []
     

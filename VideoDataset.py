@@ -38,15 +38,20 @@ class VideoDataset(Dataset):
         
         self.path2imgs = path2imgs
         self.path2labels = path2labels
-        self.length = int(len(self.path2imgs)/self.timesteps)
+        
+        #self.length = int(len(self.path2imgs)/self.timesteps)
+        self.length = int(len(self.path2imgs)-self.timesteps)
         
     def __len__(self):
         return self.length
     
     def __getitem__(self, idx): 
 
-        start = idx*self.timesteps
-        stop = (idx+1)*self.timesteps      
+        #start = idx*self.timesteps
+        #stop = (idx+1)*self.timesteps   
+        
+        start = idx
+        stop = idx+self.timesteps
         
         temp_path2imgs = self.path2imgs[start:stop]
         temp_path2labels = self.path2labels[start:stop]

@@ -33,7 +33,7 @@ class Resnt18Rnn(nn.Module):
         
         y = self.baseModel((x[:,ii]))
         
-        output, (hn, cn) = self.rnn(y.unsqueeze(1))
+        out, (hn, cn) = self.rnn(y.unsqueeze(1))
         
         for ii in range(1, ts):
             y = self.baseModel((x[:,ii]))
@@ -41,12 +41,12 @@ class Resnt18Rnn(nn.Module):
         out = self.dropout(out[:,-1])
         out = self.fc1(out)
         
-        sign = torch.sign(out)
-        out = self.relu(sign)
+        #sign = torch.sign(out)
+        #out = self.relu(sign)
         
         return out 
     
-    def predict(self, x, hidden):
+    def predict(self, x, hidden=None):
         torch.no_grad()
         
         b_z, ts, c, h, w = x.shape
@@ -56,16 +56,16 @@ class Resnt18Rnn(nn.Module):
         
         y = self.baseModel((x[:,ii]))
         
-        output, (hn, cn) = self.rnn(y.unsqueeze(1))
-        
-        for ii in range(1, ts):
-            y = self.baseModel((x[:,ii]))
-            out, (hn, cn) = self.rnn(y.unsqueeze(1), (hn, cn))
+        if(hidden==None):
+            out, (hn, cn) = self.rnn(y.unsqueeze(1))
+        else:
+            out, (hn, cn) = self.rnn(y.unsqueeze(1), hidden)
 
         out = self.fc1(out) 
         
-        sign = torch.sign(out)
-        out = self.relu(sign)
+        #sign = torch.sign(out)
+        #out = self.relu(sign)
+        out = self.sigmoid(out)
         
         return out, (hn, cn)
     
