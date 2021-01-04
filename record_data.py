@@ -54,52 +54,33 @@ def on_release(key):
         # Stop listener
         return False
 
-#Start our non-blocking key listener
-listener = keyboard.Listener(
-    on_press=on_press,
-    on_release=on_release)
-listener.start()
 
-def record_data():
-    #The combined data--both images and key presses--that we will collect with
-    #this script
-    data = []
+
+def sample_data(input_data=None, target_fps=15):
     #As long as the listener is running, continue taking screenshots
-    start_time = time()
     loop_time = time()
     
-    print('Recording...')
+    #Collect screenshot
+    screenshot = np.array(take_screenshot(window))
     
-    while listener.running:
-        #Collect screenshot
-        screenshot = np.array(take_screenshot(window))
-        
+    if input_data == None:
         #Collect input at that time
         input_for_screenshot = cur_input.copy()
-        
-        data.append([screenshot, input_for_screenshot])
+    else:
+        input_for_screenshot = input_data
     
-        #Determine fps
-        fps = time_to_loop(loop_time)
-        
+    new_data = [screenshot, input_for_screenshot]
+
+    #Determine fps
+    fps = time_to_loop(loop_time)
+    
+    if target_fps != None:
         #Force program to wait until we are beneath the target_fps
         while fps > target_fps:
             fps = time_to_loop(loop_time)
-            
-        #print(fps)
-        #Record new loop_time
-        loop_time = time()
         
-        print(time()-start_time)
-        
-        if time()-start_time >= 60/fps + 1:
-            
-            save_data(data)
-            start_time = time()
-            data = []
-            print('Recording...')
-    if len(data) > 0:
-        save_data(data)
+    #print(fps)
+    return new_data
 
 def save_data(data):
     print('Saving...')
@@ -119,5 +100,30 @@ def save_data(data):
         np.save(f'data\\{save_time}\\input\\{filename}', np.array(input_to_save))
         
     print('Data collection successful!')
+
+if __name__ == "__main__":
+    #Start our non-blocking key listener
+    listener = keyboard.Listener(
+        on_press=on_press,
+        on_release=on_release)
+    listener.start()
     
-record_data()
+    #The combined data--both images and key presses--that we will collect with
+    #this script
+    data = []
+    
+    start_time = time()
+    
+    print('Recording...')
+    while listener.running:
+        new_data = sample_data()
+        data.append(new_data)
+        
+        if time()-start_time >= 20: 
+            save_data(data)
+            start_time = time()
+            data = []
+            print('Recording...')
+            
+    if len(data) > 0:
+        save_data(data)

@@ -39,19 +39,19 @@ class VideoDataset(Dataset):
         self.path2imgs = path2imgs
         self.path2labels = path2labels
         
-        #self.length = int(len(self.path2imgs)/self.timesteps)
-        self.length = int(len(self.path2imgs)-self.timesteps)
+        self.length = int(len(self.path2imgs)/self.timesteps)
+        #self.length = int(len(self.path2imgs)-self.timesteps)
         
     def __len__(self):
         return self.length
     
     def __getitem__(self, idx): 
 
-        #start = idx*self.timesteps
-        #stop = (idx+1)*self.timesteps   
+        start = idx*self.timesteps
+        stop = (idx+1)*self.timesteps   
         
-        start = idx
-        stop = idx+self.timesteps
+        #start = idx
+        #stop = idx+self.timesteps
         
         temp_path2imgs = self.path2imgs[start:stop]
         temp_path2labels = self.path2labels[start:stop]
@@ -74,76 +74,6 @@ class VideoDataset(Dataset):
         if len(frames_tr)>0:
             frames_tr = torch.stack(frames_tr)
         return frames_tr, labels
-        
-        # batch_frames = torch.Tensor()
-        # batch_labels = torch.Tensor()
-        
-        # for x in range(int(len(path2imgs)/self.timesteps)-1):
-            
-        #     temp_path2imgs = path2imgs[x*self.timesteps:(x+1)*self.timesteps]
-        #     temp_path2labels = path2labels[x*self.timesteps:(x+1)*self.timesteps]
-            
-        #     frames = []
-            
-        #     for p2i in temp_path2imgs:
-        #         frame = Image.open(p2i)
-        #         frames.append(frame)
-            
-        #     labels = []
-            
-        #     for p2l in temp_path2labels:
-        #         label = np.load(p2l)
-        #         labels.append(label)
-                
-        #     frames_tr = []
-                
-        #     for frame in frames:
-        #         frame = self.transform(frame)
-        #         frames_tr.append(frame)
-           
-        #     if len(batch_frames)>0:
-        #         frames_tr = torch.stack(frames_tr).unsqueeze(0)
-        #         labels = torch.Tensor(labels).unsqueeze(0)
-                
-        #         print('frames',batch_frames.shape)
-        #         print('labels',batch_labels.shape)
-                
-        #         batch_frames = torch.cat((batch_frames, frames_tr))
-        #         batch_labels = torch.cat((batch_labels, labels))
-        #     else:
-        #         batch_frames = torch.stack(frames_tr).unsqueeze(0)
-        #         batch_labels = torch.Tensor(labels).unsqueeze(0)
-        
-        # return batch_frames, batch_labels
-
-
     
-    
-    
-# path2imgs = sorted(glob.glob(self.ids[idx]+"\\*.png"), key=len)
-# path2labels = sorted(glob.glob(self.labels[idx]+"\\*.npy"), key=len)
-
-# path2imgs = path2imgs[:self.timesteps]
-# path2labels = path2labels[:self.timesteps]
-
-# frames = []
-# print(path2imgs)
-# print(path2labels)
-# for p2i in path2imgs:
-#     frame = Image.open(p2i)
-#     frames.append(frame)
-
-# labels = []
-# for p2l in path2labels:
-#     label = np.load(p2l)
-#     labels.append(label)
-   
-# frames_tr = []
-# for frame in frames:
-#     frame = self.transform(frame)
-#     frames_tr.append(frame)
-# if len(frames_tr)>0:
-#     frames_tr = torch.stack(frames_tr)
-# return frames_tr, labels
 
 

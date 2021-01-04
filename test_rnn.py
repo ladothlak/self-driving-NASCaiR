@@ -30,15 +30,23 @@ class Resnt18Rnn(nn.Module):
     def forward(self, x):
         b_z, ts, c, h, w = x.shape
         ii = 0
+        temp_out = []
         
         y = self.baseModel((x[:,ii]))
         
         out, (hn, cn) = self.rnn(y.unsqueeze(1))
+        #out = out.squeeze(1)
         
         for ii in range(1, ts):
             y = self.baseModel((x[:,ii]))
-            out, (hn, cn) = self.rnn(y.unsqueeze(1), (hn, cn))
-        out = self.dropout(out[:,-1])
+            output, (hn, cn) = self.rnn(y.unsqueeze(1), (hn, cn))
+            
+            temp_out.append(output.squeeze(1))
+            
+        temp_out = torch.stack((temp_out),1)
+        out = torch.cat((out, temp_out),1)
+        
+        out = self.dropout(out)
         out = self.fc1(out)
         
         #sign = torch.sign(out)

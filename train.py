@@ -16,7 +16,7 @@ torch.cuda.empty_cache()
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 DIMS = [224, 224]
-SEQUENCE_LENGTH = 15
+SEQUENCE_LENGTH = 20
 #Latest training was with BATCH_SIZE = 24
 BATCH_SIZE = 128
 LSTM_INPUT = 6
@@ -31,7 +31,7 @@ params_model={
 
 MODEL = Resnt18Rnn(params_model).train()
 CRITERION = nn.BCEWithLogitsLoss()
-OPTIMIZER = optim.Adam(MODEL.parameters(), lr=1e-4)
+OPTIMIZER = optim.Adam(MODEL.parameters(), lr=1e-3)
 
 device = torch.device('cuda')
 
@@ -58,7 +58,7 @@ full_transform = transforms.Compose([
         ])
 
 #Create training dataset
-train_ds = VideoDataset(img_directories, label_directories, full_transform, 4)
+train_ds = VideoDataset(img_directories, label_directories, full_transform, SEQUENCE_LENGTH)
 
 #Put the data in dataloaders
 def collate_fn_rnn(batch):
@@ -78,6 +78,7 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
     #Train that bad boy
     loss_history = []
     
+    print(device)
     model.to(device, non_blocking=True)
     model.train()
     
@@ -92,9 +93,9 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             
             model.zero_grad()
             
-            train_prediction = model.forward(x)#[0].unsqueeze(0)
+            train_prediction = model.forward(x)
             
-            loss = loss_fn(train_prediction, y[:,-1,:])
+            loss = loss_fn(train_prediction, y)
             
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 5)
@@ -102,8 +103,8 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             
             loss_history.append(loss.data.item())
             
-            if batch%20 == 0:
-                print(batch)
+            if batch%1 == 0:
+                print(batch, round(loss.data.item(),5))
             
         print(f'Epoch time: {time()-start_epoch}')
         print(f'Average batch error: {round(np.mean(loss_history), 5)}')
@@ -144,6 +145,14 @@ def dump_tensors(gpu_only=True):
 	print("Total size:", total_size)
 
 #dump_tensors()
+
+# try:
+#     MODEL = torch.load('models\\trained_model_1609779275.6236634.obj')
+#     print('Successfully loaded previous model')
+# except:
+#     pass
+
+torch.cuda.empty_cache()
 
 trained_model = train(MODEL, EPOCHS, CRITERION, OPTIMIZER, train_dl)
 
