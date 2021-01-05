@@ -18,9 +18,8 @@ STD = [0.229, 0.224, 0.225]
 DIMS = [224, 224]
 SEQUENCE_LENGTH = 20
 #Latest training was with BATCH_SIZE = 24
-BATCH_SIZE = 128
-LSTM_INPUT = 6
-EPOCHS = 15
+BATCH_SIZE = 32
+EPOCHS = 10
 
 params_model={
         "num_classes": 4,
@@ -31,7 +30,7 @@ params_model={
 
 MODEL = Resnt18Rnn(params_model).train()
 CRITERION = nn.BCEWithLogitsLoss()
-OPTIMIZER = optim.Adam(MODEL.parameters(), lr=1e-3)
+OPTIMIZER = optim.RMSprop(MODEL.parameters(), lr=1e-4)
 
 device = torch.device('cuda')
 
@@ -95,7 +94,7 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             
             train_prediction = model.forward(x)
             
-            loss = loss_fn(train_prediction, y)
+            loss = loss_fn(train_prediction, y[:,-4:,:])
             
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 5)
@@ -103,7 +102,7 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             
             loss_history.append(loss.data.item())
             
-            if batch%1 == 0:
+            if batch%10 == 0:
                 print(batch, round(loss.data.item(),5))
             
         print(f'Epoch time: {time()-start_epoch}')
@@ -146,11 +145,12 @@ def dump_tensors(gpu_only=True):
 
 #dump_tensors()
 
-# try:
-#     MODEL = torch.load('models\\trained_model_1609779275.6236634.obj')
-#     print('Successfully loaded previous model')
-# except:
-#     pass
+if False:
+    try:
+        MODEL = torch.load('models\\trained_model_1609861315.4472296.obj')
+        print('Successfully loaded previous model')
+    except:
+        pass
 
 torch.cuda.empty_cache()
 
