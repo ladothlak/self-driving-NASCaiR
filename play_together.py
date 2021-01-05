@@ -68,7 +68,7 @@ if __name__ == "__main__":
     board = keyboard.Controller()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609697904.8732946.obj'
+    MODEL_PATH = 'models\\trained_model_1609858299.4669878.obj'
     MODEL = torch.load(MODEL_PATH).eval()
     
     #Initialize hidden input
@@ -103,7 +103,7 @@ if __name__ == "__main__":
             print('Your turn!')
                 
             #give control to player
-            while time()-loop_start < time_to_control:
+            while time()-loop_start < time_to_control and listener.running:
                 #Keep on updating the hidden state for DaiLE so he doesn't forget
                 #context when we hand control back over to him
                 hidden, _ = DaiLE.run_action_loop(MODEL, hidden, window, fps_target=None, take_action=False)

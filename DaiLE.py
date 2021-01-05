@@ -93,7 +93,7 @@ def draw_cv_window(screenshot, logits, fps):
     screenshot = cv.resize(screenshot, (256, 180))
     screenshot = cv.cvtColor(screenshot, cv.COLOR_BGR2RGB)
     cv.imshow(img_window_name, screenshot)
-    cv.moveWindow(img_window_name,1500,700)
+    cv.moveWindow(img_window_name,2580,700)
     cv.waitKey(1)
     
 def prep_DaiLE_img(screenshot):
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609697904.8732946.obj'
+    MODEL_PATH = 'models\\trained_model_1609858299.4669878.obj'
     MODEL = torch.load(MODEL_PATH).eval()
     
     try:
