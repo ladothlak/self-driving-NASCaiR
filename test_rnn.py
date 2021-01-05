@@ -44,7 +44,7 @@ class Resnt18Rnn(nn.Module):
             temp_out.append(output.squeeze(1))
             
         temp_out = torch.stack((temp_out),1)
-        out = torch.cat((out, temp_out),1)
+        out = torch.cat((out, temp_out),1)[:,-5:-1,:]
         
         out = self.dropout(out)
         out = self.fc1(out)
@@ -52,7 +52,7 @@ class Resnt18Rnn(nn.Module):
         #sign = torch.sign(out)
         #out = self.relu(sign)
         
-        return out 
+        return out
     
     def predict(self, x, hidden=None):
         torch.no_grad()

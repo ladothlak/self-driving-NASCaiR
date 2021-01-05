@@ -75,18 +75,19 @@ def draw_cv_window(screenshot, logits, fps):
     for keypress in range(len(logits)):
         
         if logits[keypress] < 0.5:
-            color = (127.5+127.5*(1-logits[keypress]), 0, 0)
+            color = (2*255*(0.5-logits[keypress]), 0, 0)
         else:
-            color = (0, 127.5+127.5*(logits[keypress]), 0)
+            color = (0, 2*255*(logits[keypress]-0.5), 0)
             
         screenshot = cv.putText(screenshot, switcher.get(keypress),
                                 (org_x, org_y), font, fontScale, color, 
                                 thickness, cv.LINE_AA)
         
+        
         org_x += spacing
         
     screenshot = cv.putText(screenshot, str(round(fps)),
-                        (100,100), font, 6, color, 
+                        (100,100), font, 6, (255, 0, 0), 
                         thickness, cv.LINE_AA)
     
     #Make live plot showing DaiLE's vision
@@ -159,7 +160,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609697904.8732946.obj'
+    MODEL_PATH = 'models\\trained_model_1609869333.0281532.obj'
     MODEL = torch.load(MODEL_PATH).eval()
     
     try:
