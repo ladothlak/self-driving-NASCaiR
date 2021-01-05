@@ -24,6 +24,8 @@ switcher = {
 # Doing this because I'll be putting the files from each video in their own folder on GitHub
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+isBen = True;
+
 ## Utility functions
     
 def time_to_loop(loop_time, show_fps = False):
@@ -94,7 +96,10 @@ def draw_cv_window(screenshot, logits, fps):
     screenshot = cv.resize(screenshot, (256, 180))
     screenshot = cv.cvtColor(screenshot, cv.COLOR_BGR2RGB)
     cv.imshow(img_window_name, screenshot)
-    cv.moveWindow(img_window_name,2580,700)
+    if isBen:
+        cv.moveWindow(img_window_name,2580,700)
+    else:
+        cv.moveWindow(img_window_name,1500,700)
     cv.waitKey(1)
     
 def prep_DaiLE_img(screenshot):
