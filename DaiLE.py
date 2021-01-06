@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import os
 import win32com.client
+import pyvjoy
 
 from time import time
 from screenshot import take_screenshot
@@ -10,20 +11,13 @@ from torchvision import transforms
 from pynput import keyboard
 from assetto_corsa_telemetry_reader import AssettoCorsaData
 
-## Parameters related to window
-board = keyboard.Controller()
-
-## Key parameters
-switcher = {
-    0:'w',
-    1:'a',
-    2:'s',
-    3:'d'
-    }
-
 # Change the working directory to the folder this script is in.
 # Doing this because I'll be putting the files from each video in their own folder on GitHub
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+switcher = {0:'<- ->', 1:'^', 2:'_'}
+j = pyvjoy.VJoyDevice(1)
+vjoy_const = 32768
 
 ## Utility functions
     
@@ -53,15 +47,11 @@ def get_predictions(model, img, tel, hidden):
 
 def input_network_recommendation(model_inputs, window):
     client = win32com.client.Dispatch("WScript.Shell")
-    for keypress in range(len(model_inputs)):
-        client.AppActivate(window)
-        cur_key = switcher.get(keypress)
+    client.AppActivate(window)
     
-        if model_inputs[keypress] == 0:
-            board.release(cur_key)
-        else:
-            board.press(cur_key)
-            pass
+    j.set_axis(pyvjoy.HID_USAGE_Z, hex(model_inputs[0]))
+    j.set_axis(pyvjoy.HID_USAGE_X, hex(model_inputs[1]))
+    j.set_axis(pyvjoy.HID_USAGE_Y, hex(model_inputs[2]))
 
 def draw_cv_window(screenshot, logits, fps):
     img_window_name = 'DaiLE'

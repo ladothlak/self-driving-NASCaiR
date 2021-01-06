@@ -22,7 +22,7 @@ BATCH_SIZE = 32
 EPOCHS = 20
 
 params_model={
-        "num_classes": 4,
+        "num_classes": 3,
         "dr_rate": 0.1,
         "pretrained" : True,
         "rnn_num_layers": 2,

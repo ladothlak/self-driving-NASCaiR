@@ -1,10 +1,12 @@
 from pynput import keyboard
 import numpy as np
+import os
+
 from time import time
 from PIL import Image
-import os
 from screenshot import take_screenshot
 from assetto_corsa_telemetry_reader import AssettoCorsaData
+from XboxController import XboxController
 
 window = 'Assetto Corsa'
 
@@ -12,16 +14,8 @@ window = 'Assetto Corsa'
 target_fps = 15
 sequence_length = 60
 
-#The current input w a s d
-cur_input = [0, 0, 0, 0]
-
-#Hash table for quick keypress lookup
-switcher = {
-    'w':0,
-    'a':1,
-    's':2,
-    'd':3
-    }
+#The input device
+controller = XboxController()
 
 def time_to_loop(loop_time, show_fps = False):
     fps = 1 / (time() - loop_time)
@@ -31,33 +25,15 @@ def time_to_loop(loop_time, show_fps = False):
         print('FPS {}'.format(fps))
         
     return fps
-    
 
-def on_press(key):
-    try:      
-        result = switcher.get(key.char, '')
-        if (result != ''):
-            cur_input[result] = 1
-            
-    except AttributeError:
-        pass
-
-def on_release(key):
-    try:
-        result = switcher.get(key.char, '')
-        if (result != ''):
-            cur_input[result] = 0
-
-    except:
-        pass
-    
+def on_release(key):  
     if key == keyboard.Key.f10:
         # Stop listener
         return False
 
 
 
-def sample_data(reader, input_data=None, target_fps=15):
+def sample_data(reader, target_fps=15):
     #As long as the listener is running, continue taking screenshots
     loop_time = time()
     telemetry_data = reader.getData()
@@ -67,11 +43,7 @@ def sample_data(reader, input_data=None, target_fps=15):
     #Collect screenshot
     screenshot = np.array(take_screenshot(window))
     
-    if input_data == None:
-        #Collect input at that time
-        input_for_screenshot = cur_input.copy()
-    else:
-        input_for_screenshot = input_data
+    input_for_screenshot = controller.read()
     
     new_data = [screenshot, input_for_screenshot, [speed, steering_angle]]
 
@@ -111,7 +83,6 @@ def save_data(data):
 if __name__ == "__main__":
     #Start our non-blocking key listener
     listener = keyboard.Listener(
-        on_press=on_press,
         on_release=on_release)
     listener.start()
     
