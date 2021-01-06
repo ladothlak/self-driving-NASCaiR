@@ -31,7 +31,7 @@ params_model={
 
 MODEL = Resnt18Rnn(params_model).train()
 CRITERION = nn.BCEWithLogitsLoss()
-OPTIMIZER = optim.RMSprop(MODEL.parameters(), lr=1e-4)
+OPTIMIZER = optim.RMSprop(MODEL.parameters(), lr=1e-3)
 
 device = torch.device('cuda')
 
@@ -153,9 +153,9 @@ def dump_tensors(gpu_only=True):
 
 #dump_tensors()
 
-if False:
+if True:
     try:
-        MODEL = torch.load('models\\trained_model_1609869333.0281532.obj')
+        MODEL = torch.load('models\\trained_model_1609882849.2874284.obj')
         print('Successfully loaded previous model')
     except:
         pass

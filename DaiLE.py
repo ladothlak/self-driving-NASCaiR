@@ -123,7 +123,6 @@ def run_action_loop(model, hidden, window, reader, fps_target=15, take_action=Tr
     
     telemetry_data = reader.getData()
     speed, steering_angle = telemetry_data.get('speed')/300, telemetry_data.get('steerAngle')
-    print(speed, steering_angle)
     tel = torch.Tensor([speed, steering_angle]).unsqueeze(0).cuda()
         
     model_inputs, hidden, logits = get_predictions(model, img, tel, hidden)
@@ -168,7 +167,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609882849.2874284.obj'
+    MODEL_PATH = 'models\\trained_model_1609887973.9640508.obj'
     MODEL = torch.load(MODEL_PATH).eval()
     
     try:
