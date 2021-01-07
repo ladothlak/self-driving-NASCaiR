@@ -78,7 +78,7 @@ class Resnt18Rnn(nn.Module):
         
         #sign = torch.sign(out)
         #out = self.relu(sign)
-        out = self.sigmoid(out)
+        #out = self.sigmoid(out)
         
         return out, (hn, cn)
     

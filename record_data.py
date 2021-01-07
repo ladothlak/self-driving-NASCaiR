@@ -44,6 +44,7 @@ def sample_data(reader, target_fps=15):
     screenshot = np.array(take_screenshot(window))
     
     input_for_screenshot = controller.read()
+    print(input_for_screenshot)
     
     new_data = [screenshot, input_for_screenshot, [speed, steering_angle]]
 

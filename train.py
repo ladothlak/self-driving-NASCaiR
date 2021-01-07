@@ -19,7 +19,7 @@ DIMS = [224, 224]
 SEQUENCE_LENGTH = 20
 #Latest training was with BATCH_SIZE = 24
 BATCH_SIZE = 32
-EPOCHS = 20
+EPOCHS = 4
 
 params_model={
         "num_classes": 3,
@@ -30,7 +30,7 @@ params_model={
         "num_telemetry_data_pts":2}
 
 MODEL = Resnt18Rnn(params_model).train()
-CRITERION = nn.BCEWithLogitsLoss()
+CRITERION = nn.MSELoss()
 OPTIMIZER = optim.RMSprop(MODEL.parameters(), lr=1e-3)
 
 device = torch.device('cuda')
@@ -153,7 +153,7 @@ def dump_tensors(gpu_only=True):
 
 #dump_tensors()
 
-if True:
+if False:
     try:
         MODEL = torch.load('models\\trained_model_1609882849.2874284.obj')
         print('Successfully loaded previous model')

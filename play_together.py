@@ -17,6 +17,7 @@ import cv2 as cv
 from random import randint
 from pynput import keyboard
 from time import time
+from XboxController import XboxController
 
 #Define lower and upper bounds of control time
 TIME_LB = 5
@@ -30,29 +31,10 @@ switcher = {
     'd':3
     }
 
-cur_input = [0, 0, 0, 0]
-
 def on_press(key):
     if key == keyboard.Key.f10:
         # Stop listener
         return False
-    
-    try:      
-        result = switcher.get(key.char, '')
-        if (result != ''):
-            cur_input[result] = 1
-            
-    except AttributeError:
-        pass
-    
-def on_release(key):
-    try:
-        result = switcher.get(key.char, '')
-        if (result != ''):
-            cur_input[result] = 0
-
-    except:
-        pass
 
 if __name__ == "__main__":
     #Get window to control
@@ -60,12 +42,11 @@ if __name__ == "__main__":
     
     #Start our key listener
     listener = keyboard.Listener(
-        on_press=on_press,
-        on_release=on_release)
+        on_press=on_press)
     listener.start()
     
     #Create keyboard controller
-    board = keyboard.Controller()
+    controller = XboxController()
     
     #Load in a model
     MODEL_PATH = 'models\\trained_model_1609697904.8732946.obj'
@@ -95,10 +76,6 @@ if __name__ == "__main__":
                     warned = True
                     print('Get ready!')
                 
-            #Unpress any keys pressed by DaiLE
-            for cur_key in ['w', 'a', 's', 'd']:
-                board.release(cur_key)
-                
             loop_start = time()
             print('Your turn!')
                 
@@ -108,7 +85,7 @@ if __name__ == "__main__":
                 #context when we hand control back over to him
                 hidden, _ = DaiLE.run_action_loop(MODEL, hidden, window, fps_target=None, take_action=False)
                 #Record player screen and inputs
-                new_data = record_data.sample_data(cur_input, target_fps=None)
+                new_data = record_data.sample_data(controller.read(), target_fps=None)
                 data.append(new_data)
                 
             record_data.save_data(data)

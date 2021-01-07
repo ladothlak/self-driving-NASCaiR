@@ -15,8 +15,17 @@ from assetto_corsa_telemetry_reader import AssettoCorsaData
 # Doing this because I'll be putting the files from each video in their own folder on GitHub
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-switcher = {0:'<- ->', 1:'^', 2:'_'}
+switcher = {0:'<', 1:'^', 2:'_'}
+
 j = pyvjoy.VJoyDevice(1)
+j.set_axis(pyvjoy.HID_USAGE_Z, 0x1)
+j.set_axis(pyvjoy.HID_USAGE_Y, 0x1)
+j.set_axis(pyvjoy.HID_USAGE_X, 0x1)
+j.reset()
+j.reset_buttons()
+j.reset_data()
+j.reset_povs()
+
 vjoy_const = 32768
 
 ## Utility functions
@@ -41,7 +50,9 @@ def get_predictions(model, img, tel, hidden):
     #Take predicted input and convert back to list we can work with here
     model_inputs = model_inputs.detach().cpu().numpy()[0][0]
     logits = model_inputs
-    model_inputs = [1 if keypress>0.5 else 0 for keypress in model_inputs]
+    #model_inputs = [1 if keypress>0.5 else 0 for keypress in model_inputs]
+    
+    print(logits)
     
     return model_inputs, hidden, logits
 
@@ -49,9 +60,18 @@ def input_network_recommendation(model_inputs, window):
     client = win32com.client.Dispatch("WScript.Shell")
     client.AppActivate(window)
     
-    j.set_axis(pyvjoy.HID_USAGE_Z, hex(model_inputs[0]))
-    j.set_axis(pyvjoy.HID_USAGE_X, hex(model_inputs[1]))
-    j.set_axis(pyvjoy.HID_USAGE_Y, hex(model_inputs[2]))
+    steering = int((model_inputs[0]+1)*vjoy_const)
+    throttle = int(model_inputs[1]*vjoy_const)
+    brakes = int(model_inputs[2]*vjoy_const)
+    
+    print(steering)
+    
+    #Steering
+    j.set_axis(pyvjoy.HID_USAGE_Z, steering)
+    #Throttle
+    j.set_axis(pyvjoy.HID_USAGE_X, throttle)
+    #Brake
+    j.set_axis(pyvjoy.HID_USAGE_Y, brakes)
 
 def draw_cv_window(screenshot, logits, fps):
     img_window_name = 'DaiLE'
@@ -157,7 +177,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609887973.9640508.obj'
+    MODEL_PATH = 'models\\trained_model_1609973973.8520324.obj'
     MODEL = torch.load(MODEL_PATH).eval()
     
     try:
@@ -178,8 +198,14 @@ if __name__ == '__main__':
     
     print(min_fps, mean_fps, max_fps)
     
-    for cur_key in ['w', 'a', 's', 'd']:
-        board.release(cur_key)
+    j.set_axis(pyvjoy.HID_USAGE_Z, int(vjoy_const/2))
+    j.set_axis(pyvjoy.HID_USAGE_Y, 0x1)
+    j.set_axis(pyvjoy.HID_USAGE_X, 0x1)
+    
+    j.reset()
+    j.reset_buttons()
+    j.reset_data()
+    j.reset_povs()
         
     print('Done.')
         
