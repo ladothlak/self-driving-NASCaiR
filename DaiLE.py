@@ -49,8 +49,6 @@ def get_predictions(model, img, tel, hidden):
     logits = model_inputs
     #model_inputs = [1 if keypress>0.5 else 0 for keypress in model_inputs]
     
-    print(logits)
-    
     return model_inputs, hidden, logits
 
 def input_network_recommendation(model_inputs, window):
@@ -172,10 +170,10 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1610068189.7163436.obj'
+    MODEL_PATH = 'models\\trained_model_1610138330.5407875.obj'
     MODEL = torch.load(MODEL_PATH).eval()
     
-    sleep(1)
+    hidden, fps = run_action_loop(MODEL, hidden, window, assettoReader)
     
     try:
         while listener.running:

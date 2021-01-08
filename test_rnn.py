@@ -24,7 +24,7 @@ class Resnt18Rnn(nn.Module):
         self.baseModel = baseModel
         self.dropout= nn.Dropout(dr_rate)
         self.rnn = nn.LSTM(num_features, rnn_hidden_size, rnn_num_layers)
-        self.fc1 = nn.Linear(rnn_hidden_size, num_classes)
+        self.fc1 = nn.Linear(rnn_hidden_size+1, num_classes)
         self.sigmoid = nn.Sigmoid()
         self.rnn_hidden_size = rnn_hidden_size
         self.relu = nn.ReLU()
@@ -48,7 +48,12 @@ class Resnt18Rnn(nn.Module):
             temp_out.append(output.squeeze(1))
             
         temp_out = torch.stack((temp_out),1)
+        
         out = torch.cat((out, temp_out),1)[:,-2,:]
+        
+        tel = self.sigmoid(tel[:,-2,0].unsqueeze(1))
+        
+        out = torch.cat((out, tel), 1)
         
         out = self.dropout(out)
         out = self.fc1(out)
@@ -73,6 +78,10 @@ class Resnt18Rnn(nn.Module):
         else:
             out, (hn, cn) = self.rnn(y.unsqueeze(1), hidden)
 
+        tel = self.sigmoid(tel[:,0].unsqueeze(0).unsqueeze(1))
+        
+        out = torch.cat((out, tel), 2)
+        
         out = self.fc1(out) 
         out = self.sigmoid(out)
         

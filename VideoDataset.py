@@ -17,11 +17,12 @@ class VideoDataset(Dataset):
         directory_structure = []
         
         for directory in self.data:
-            cur_img_path = sorted(glob.glob(directory+"\\img\\*.jpg"), key=len)[:255]
-            cur_label_path = sorted(glob.glob(directory+"\\input\\*.npy"), key=len)[:255]
-            cur_tel_path = sorted(glob.glob(directory+"\\telemetry\\*.npy"), key=len)[:255]
+            cur_img_path = sorted(glob.glob(directory+"\\img\\*.jpg"), key=len)[:256]
+            cur_label_path = sorted(glob.glob(directory+"\\input\\*.npy"), key=len)[:256]
+            cur_tel_path = sorted(glob.glob(directory+"\\telemetry\\*.npy"), key=len)[:256]
             
-            directory_structure.append([cur_img_path, cur_label_path, cur_tel_path])          
+            if len(cur_img_path) >= 256:
+                directory_structure.append([cur_img_path, cur_label_path, cur_tel_path])  
         
         self.directory_structure = np.array(directory_structure)
         self.length = len(self.directory_structure)
