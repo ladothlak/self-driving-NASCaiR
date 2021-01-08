@@ -11,6 +11,7 @@ class Resnt18Rnn(nn.Module):
         rnn_hidden_size = params_model["rnn_hidden_size"]
         rnn_num_layers = params_model["rnn_num_layers"]
         num_telemetry_data_pts = params_model["num_telemetry_data_pts"]
+        self.images_to_predict = params_model["images_to_predict"]
         
         baseModel = torchvision.models.resnet18(pretrained=pretrained).eval()
         
@@ -47,13 +48,11 @@ class Resnt18Rnn(nn.Module):
             temp_out.append(output.squeeze(1))
             
         temp_out = torch.stack((temp_out),1)
-        out = torch.cat((out, temp_out),1)[:,-5:-1,:]
+        out = torch.cat((out, temp_out),1)[:,-2,:]
         
         out = self.dropout(out)
         out = self.fc1(out)
-        
-        #sign = torch.sign(out)
-        #out = self.relu(sign)
+        out = self.sigmoid(out)
         
         return out
     
@@ -75,10 +74,7 @@ class Resnt18Rnn(nn.Module):
             out, (hn, cn) = self.rnn(y.unsqueeze(1), hidden)
 
         out = self.fc1(out) 
-        
-        #sign = torch.sign(out)
-        #out = self.relu(sign)
-        #out = self.sigmoid(out)
+        out = self.sigmoid(out)
         
         return out, (hn, cn)
     

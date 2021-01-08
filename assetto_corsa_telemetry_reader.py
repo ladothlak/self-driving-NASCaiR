@@ -65,6 +65,7 @@ if __name__ == '__main__':
     assettoReader.start()
     while True:
         #print ('Assetto data:', assettoReader.getData())
-        time.sleep(1)
-        print(assettoReader.getData().get('speed'))
-        print(assettoReader.getData().get('steerAngle'))
+        throttle = assettoReader.getData().get('throttle')
+        brake = assettoReader.getData().get('brake')
+        steering = assettoReader.getData().get('steerAngle')
+        print(throttle, brake, steering)

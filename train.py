@@ -16,10 +16,11 @@ torch.cuda.empty_cache()
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 DIMS = [224, 224]
-SEQUENCE_LENGTH = 20
+SEQUENCE_LENGTH = 60
 #Latest training was with BATCH_SIZE = 24
 BATCH_SIZE = 32
-EPOCHS = 4
+EPOCHS = 3
+IMAGES_TO_PREDICT = 10
 
 params_model={
         "num_classes": 3,
@@ -27,15 +28,14 @@ params_model={
         "pretrained" : True,
         "rnn_num_layers": 2,
         "rnn_hidden_size": 200,
-        "num_telemetry_data_pts":2}
+        "num_telemetry_data_pts":2,
+        "images_to_predict":IMAGES_TO_PREDICT}
 
 MODEL = Resnt18Rnn(params_model).train()
 CRITERION = nn.MSELoss()
 OPTIMIZER = optim.RMSprop(MODEL.parameters(), lr=1e-3)
 
 device = torch.device('cuda')
-
-## Load in recordings of videos and inputs ##
 
 #Get path to data directories
 full_path = 'D:\\UsersRedirect\\Josh Cardosi\\Desktop\\Code\\TrackMania Driver'
@@ -55,12 +55,14 @@ for directory in data_directories:
 #specifications
 full_transform = transforms.Compose([ 
         transforms.Resize(DIMS),
+        transforms.ColorJitter(0.2),
         transforms.ToTensor(),
         transforms.Normalize(MEAN, STD)
         ])
 
 #Create training dataset
-train_ds = VideoDataset(img_directories, label_directories, telemetry_directories, full_transform, SEQUENCE_LENGTH)
+train_ds = VideoDataset(data_directories, full_transform, SEQUENCE_LENGTH)
+print(f'Sequences: {len(train_ds)}, Total Batches: {len(train_ds)/BATCH_SIZE}')
 
 #Put the data in dataloaders
 def collate_fn_rnn(batch):
@@ -102,7 +104,7 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             
             train_prediction = model.forward(x, z)
             
-            loss = loss_fn(train_prediction, y[:,-4:,:])
+            loss = loss_fn(train_prediction, y[:,-1,:])
             
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 5)
@@ -111,6 +113,8 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             loss_history.append(loss.data.item())
             
             if batch%10 == 0:
+                now = time()
+                print(f'{now-start_epoch} elapsed')
                 print(batch, round(loss.data.item(),5))
             
         print(f'Epoch time: {time()-start_epoch}')
@@ -153,9 +157,9 @@ def dump_tensors(gpu_only=True):
 
 #dump_tensors()
 
-if False:
+if True:
     try:
-        MODEL = torch.load('models\\trained_model_1609882849.2874284.obj')
+        MODEL = torch.load('models\\trained_model_1610068189.7163436.obj')
         print('Successfully loaded previous model')
     except:
         pass

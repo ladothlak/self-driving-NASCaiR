@@ -8,48 +8,59 @@ import pyvjoy
 from time import sleep
 from XboxController import XboxController
 
-controller = XboxController()
+test_self = False
 
-# while 1:
-#     print(controller.read())
+if test_self:
+    controller = XboxController()
 
-j = pyvjoy.VJoyDevice(1)
+    while 1:
+        print(controller.read())
 
-#sleep(40)
-
-j.reset()
-j.reset_buttons()
-j.reset_data()
-j.reset_povs()
-
-print('Running nothing')
-
-sleep(3)
-
-print('Running set')
-#j.set_axis(pyvjoy.HID_USAGE_X, 32768)
-#j.set_axis(pyvjoy.HID_USAGE_Y, 32768)
-#j.set_axis(pyvjoy.HID_USAGE_Z, 32768)
-#j.set_axis(pyvjoy.HID_USAGE_RZ, 0x1) 
-
-print('Running random')
-#Throttle
-num = 1
-while num<=30000:
-    j.set_axis(pyvjoy.HID_USAGE_Z, num)
-    j.set_axis(pyvjoy.HID_USAGE_Y, num)
-    j.set_axis(pyvjoy.HID_USAGE_X, num)
-    sleep(0.1)
-    num+=1000
-    print(num)
+else:
+    j = pyvjoy.VJoyDevice(1)
     
-while num>0:
-    j.set_axis(pyvjoy.HID_USAGE_Z, num)
-    j.set_axis(pyvjoy.HID_USAGE_Y, num)
-    j.set_axis(pyvjoy.HID_USAGE_X, num)
-    sleep(0.1)
-    num-=1000
-    print(num)
+    j.reset()
+    j.reset_buttons()
+    j.reset_data()
+    j.reset_povs()
+    
+    num = 32768
+    
+    while num > 0:
+        j.data.wAxisX = num
+        #Steering
+        j.data.wAxisY = num
+        #Brakes
+        j.data.wAxisZ = num
+        j.update()
+        sleep(0.1)
+        num-=1000
+        print(num)
+    
+    while num<=32768:
+        #Throttle
+        j.data.wAxisX = num
+        #Steering
+        j.data.wAxisY = num
+        #Brakes
+        j.data.wAxisZ = num
+        j.update()
+        sleep(0.1)
+        num+=1000
+        print(num)
+    
+    #Throttle
+    j.data.wAxisX = 10000
+    #Steering
+    j.data.wAxisY = 32768//2
+    #Brakes
+    j.data.wAxisZ = 0
+    j.update()
+        
+    j.reset()
+    j.reset_buttons()
+    j.reset_data()
+    j.reset_povs()
 
 # j.set_axis(pyvjoy.HID_USAGE_RZ, 0x1)    
 # j.set_axis(pyvjoy.HID_USAGE_X, 0x2000)

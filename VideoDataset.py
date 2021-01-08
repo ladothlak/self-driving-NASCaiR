@@ -1,98 +1,75 @@
 ## Code slightly modified from this article: https://medium.com/howtoai/video-classification-with-cnn-rnn-and-pytorch-abe2f9ee031
 
 from torch.utils.data import Dataset
+from torchvision import transforms
 import glob
 from PIL import Image
 import torch
 import numpy as np
 
 class VideoDataset(Dataset):
-    def __init__(self, ids, labels, telemetry, transform, timesteps):      
+    def __init__(self, data, transform, timesteps):      
         self.transform = transform
-        self.ids = ids
-        self.labels = labels
-        self.telemetry = telemetry
+        self.data = data
         self.timesteps = timesteps
+        self.windows_per_minibatch = 256-self.timesteps
         
-        path2imgs = []
-        path2labels = []
-        path2telemetry = []
+        directory_structure = []
         
-        for directory in self.ids:
-            cur_img_path = sorted(glob.glob(directory+"\\*.jpg"), key=len)
+        for directory in self.data:
+            cur_img_path = sorted(glob.glob(directory+"\\img\\*.jpg"), key=len)[:255]
+            cur_label_path = sorted(glob.glob(directory+"\\input\\*.npy"), key=len)[:255]
+            cur_tel_path = sorted(glob.glob(directory+"\\telemetry\\*.npy"), key=len)[:255]
             
-            runout = -(len(cur_img_path)%self.timesteps)
-            
-            if runout != 0:
-                cur_img_path = cur_img_path[:runout]
-            
-            path2imgs = path2imgs + cur_img_path
-            
-        for directory in self.labels:
-            cur_label_path = sorted(glob.glob(directory+"\\*.npy"), key=len)
-            
-            runout = -(len(cur_label_path)%self.timesteps)
-            
-            if runout != 0:
-                cur_label_path = cur_label_path[:runout]
-            
-            path2labels = path2labels + cur_label_path
-            
-        for directory in self.telemetry:
-            cur_label_path = sorted(glob.glob(directory+"\\*.npy"), key=len)
-            
-            runout = -(len(cur_label_path)%self.timesteps)
-            
-            if runout != 0:
-                cur_label_path = cur_label_path[:runout]
-            
-            path2telemetry = path2telemetry + cur_label_path
+            directory_structure.append([cur_img_path, cur_label_path, cur_tel_path])          
         
-        self.path2imgs = path2imgs
-        self.path2labels = path2labels
-        self.path2telemetry = path2telemetry
-        
-        self.length = int(len(self.path2imgs)/self.timesteps)
-        #self.length = int(len(self.path2imgs)-self.timesteps)
+        self.directory_structure = np.array(directory_structure)
+        self.length = len(self.directory_structure)
         
     def __len__(self):
-        return self.length
+        return (self.length)*(self.windows_per_minibatch)
     
     def __getitem__(self, idx): 
 
-        start = idx*self.timesteps
-        stop = (idx+1)*self.timesteps   
+        current_minibatch_set = (idx // self.windows_per_minibatch)
+        horizontal_flip = np.random.rand(0, 1)
         
-        #start = idx
-        #stop = idx+self.timesteps
-        
-        temp_path2imgs = self.path2imgs[start:stop]
-        temp_path2labels = self.path2labels[start:stop]
-        temp_path2telemetry = self.path2telemetry[start:stop]
-        
-        frames = []
-
-        for p2i in temp_path2imgs:
-            frame = Image.open(p2i)
-            frames.append(frame)
-        
-        labels = []
-        for p2l in temp_path2labels:
-            label = np.load(p2l)
-            labels.append(label)
+        idx = idx - current_minibatch_set*self.windows_per_minibatch
             
-        telemetries = []
-        for p2t in temp_path2telemetry:
-            telemetry = np.load(p2t)
-            telemetries.append(telemetry)
-           
+        #minibatch_start = current_minibatch_set*self.minibatch_size
+        #minibatch_stop = (current_minibatch_set+1)*self.minibatch_size
+        window_start = idx
+        window_stop = idx+self.timesteps
+        
+        temp_minibatch_directory = self.directory_structure[current_minibatch_set]
+        
+        temp_path2imgs = temp_minibatch_directory[0,window_start:window_stop]
+        temp_path2labels = temp_minibatch_directory[1,window_start:window_stop]        
+        temp_path2telemetry = temp_minibatch_directory[2,window_start:window_stop]
+        
         frames_tr = []
-        for frame in frames:
-            frame = self.transform(frame)
-            frames_tr.append(frame)
+        labels = []
+        telemetries = []
+            
+        for p2i, p2l, p2t in list(zip(temp_path2imgs, temp_path2labels, temp_path2telemetry)):
+            frame = Image.open(p2i)
+            label = np.load(p2l)
+            telemetry = np.load(p2t)
+            
+            if horizontal_flip >= 0.5:
+                #frame = transforms.functional.hflip(frame)
+                #label[0] = label[0]*-1
+                #telemetry[1] = telemetry[1]*-1
+                pass
+
+            
+            frames_tr.append(self.transform(frame))
+            labels.append(label)
+            telemetries.append(telemetry)
+            
         if len(frames_tr)>0:
             frames_tr = torch.stack(frames_tr)
+            
         return frames_tr, telemetries, labels
-    
 
 

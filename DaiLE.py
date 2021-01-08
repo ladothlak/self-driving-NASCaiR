@@ -5,7 +5,7 @@ import os
 import win32com.client
 import pyvjoy
 
-from time import time
+from time import time, sleep
 from screenshot import take_screenshot
 from torchvision import transforms
 from pynput import keyboard
@@ -18,15 +18,12 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 switcher = {0:'<', 1:'^', 2:'_'}
 
 j = pyvjoy.VJoyDevice(1)
-j.set_axis(pyvjoy.HID_USAGE_Z, 0x1)
-j.set_axis(pyvjoy.HID_USAGE_Y, 0x1)
-j.set_axis(pyvjoy.HID_USAGE_X, 0x1)
-j.reset()
-j.reset_buttons()
-j.reset_data()
-j.reset_povs()
+j.data.wAxisX = 32767
+j.data.wAxisY = 32767//2
+j.data.wAxisZ = 0
+j.update()
 
-vjoy_const = 32768
+vjoy_const = 32767
 
 ## Utility functions
     
@@ -60,18 +57,16 @@ def input_network_recommendation(model_inputs, window):
     client = win32com.client.Dispatch("WScript.Shell")
     client.AppActivate(window)
     
-    steering = int((model_inputs[0]+1)*vjoy_const)
-    throttle = int(model_inputs[1]*vjoy_const)
-    brakes = int(model_inputs[2]*vjoy_const)
+    steering = max(int(((model_inputs[0])*vjoy_const)), 0)
+    throttle = max(int(model_inputs[1]*vjoy_const), 0)
+    brakes = max(int(model_inputs[2]*vjoy_const), 0)
     
-    print(steering)
+    print(f'Steering: {steering}, Throttle: {throttle}, Brakes {brakes}')
     
-    #Steering
-    j.set_axis(pyvjoy.HID_USAGE_Z, steering)
-    #Throttle
-    j.set_axis(pyvjoy.HID_USAGE_X, throttle)
-    #Brake
-    j.set_axis(pyvjoy.HID_USAGE_Y, brakes)
+    j.data.wAxisX = throttle
+    j.data.wAxisZ = brakes
+    j.data.wAxisY = steering
+    j.update()
 
 def draw_cv_window(screenshot, logits, fps):
     img_window_name = 'DaiLE'
@@ -177,8 +172,10 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     
     #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609973973.8520324.obj'
+    MODEL_PATH = 'models\\trained_model_1610068189.7163436.obj'
     MODEL = torch.load(MODEL_PATH).eval()
+    
+    sleep(1)
     
     try:
         while listener.running:
@@ -198,14 +195,10 @@ if __name__ == '__main__':
     
     print(min_fps, mean_fps, max_fps)
     
-    j.set_axis(pyvjoy.HID_USAGE_Z, int(vjoy_const/2))
-    j.set_axis(pyvjoy.HID_USAGE_Y, 0x1)
-    j.set_axis(pyvjoy.HID_USAGE_X, 0x1)
-    
-    j.reset()
-    j.reset_buttons()
-    j.reset_data()
-    j.reset_povs()
+    j.data.wAxisX = 0
+    j.data.wAxisY = 0
+    j.data.wAxisZ = 0
+    j.update()
         
     print('Done.')
         
