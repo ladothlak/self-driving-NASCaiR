@@ -15,9 +15,13 @@ Additionally, you will need to have either Steam (preferred) or x360ce installed
 ## What's included with this package
 
 DaiLE.py: a class that loads the trained model and can interact with the game
+
 record_data.py: a class that allows for asyncronous data acquisition of telemetry, visual game state (i.e. screenshots), and controller inputs
+
 play_together.py: a script which allows for cross-play between you and DaiLE--good for getting him out sticky situations. Actuating either the throttle or brakes will immediately interrupt DaiLE's game time and let you help him out
+
 train.py: script to train a new DaiLE model
+
 test_rnn.py: the actual architecture behind DaiLE's model. Still subject to change with time, as we are investigating features to give him still
 
 
