@@ -19,7 +19,7 @@ STD = [0.229, 0.224, 0.225]
 DIMS = [224, 224]
 SEQUENCE_LENGTH = 60
 BATCH_SIZE = 16
-EPOCHS = 3
+EPOCHS = 5
 IMAGES_TO_PREDICT = 10
 NUM_WORKERS = 3
 
@@ -162,9 +162,9 @@ def dump_tensors(gpu_only=True):
 #dump_tensors()
 
 if __name__ == '__main__':
-    if False:
+    if True:
         try:
-            MODEL = torch.load('models\\trained_model_1610068189.7163436.obj')
+            MODEL = torch.load('models\\trained_model_1610188710.394599.obj')
             print('Successfully loaded previous model')
         except:
             pass

@@ -7,93 +7,115 @@
 # aggressively)                                                            #
 ############################################################################
 
-#Import required functionality from other scripts
+# Import required functionality from other scripts
 
-import DaiLE
+from DaiLE import DaiLE
 import record_data
-import torch
-import cv2 as cv
+import sys
+import pyvjoy
+import numpy as np
 
-from random import randint
 from pynput import keyboard
 from time import time
 from XboxController import XboxController
+from assetto_corsa_telemetry_reader import AssettoCorsaData
 
-#Define lower and upper bounds of control time
-TIME_LB = 5
-TIME_UB = 10
 
-#Hash table for quick keypress lookup
-switcher = {
-    'w':0,
-    'a':1,
-    's':2,
-    'd':3
-    }
+def DaiLE_loop(model_path, data_recorder, controller):
+    DaiLE_obj = DaiLE(model_path, fps_target=None,
+                      debug_mode=True, lightweight_mode=True)
+    RT, LT = 0, 0
+    data = []
 
-def on_press(key):
-    if key == keyboard.Key.f10:
-        # Stop listener
-        return False
+    while ((RT <= 0.01) and (LT <= 0.01) and listener.running):
+        # Get player controller inputs
+        _, RT, LT = controller.read()
+
+        # Do DaiLE things (pressing keys, being scared of grass, etc.)
+        model_inputs, screenshot, telemetry = DaiLE_obj.run_action_loop()
+
+        new_data = [screenshot, model_inputs, telemetry]
+        data.append(new_data)
+
+        if len(data) >= 60:
+            data = data[-60:]
+
+    return data, DaiLE_obj._return_controller()
+
+
+def main_loop(listener):
+    # Get window to control
+    window = 'Assetto Corsa'
+
+    # Create controller object to check state of player controller
+    controller = XboxController()
+    recorder = record_data.data_recorder(window, controller, async_sample=True)
+
+    # Load in a model
+    MODEL_PATH = 'models\\trained_model_1610148993.9142728.obj'
+
+    try:
+        print('DaiLE\'s turn!')
+        # give control to DaiLE
+        data, j = DaiLE_loop(MODEL_PATH, recorder, controller)
+
+        print('Interrupting DaiLE!')
+
+        loop_start = time()-0.05
+        # give control to player
+        while ((len(data) < 300) and listener.running):
+
+            controller.write(j)
+
+            fps = recorder.time_to_loop(loop_start)
+
+            # Record player screen and inputs
+            if fps <= 15:
+                data.append(recorder.package_data(scale_speed=True))
+                loop_start = time()-.05
+
+            if(len(data) == 256):
+                print('Reset inputs now')
+
+        j.data.wAxisX = 0
+        j.data.wAxisY = 32767//2
+        j.data.wAxisZ = 32767
+        j.update()
+
+        controller.stop()
+
+        return data[:256], recorder
+
+    except:
+        print("Unexpected error:", sys.exc_info())
+
+    try:
+        j.data.wAxisX = 0
+        j.data.wAxisY = 32767//2
+        j.data.wAxisZ = 32767
+        j.update()
+    except:
+        pass
+
 
 if __name__ == "__main__":
-    #Get window to control
-    window = 'Assetto Corsa'
-    
-    #Start our key listener
+
+    def on_press(key):
+        if key == keyboard.Key.f10:
+            # Stop listener
+            return False
+    # Start our key listener
     listener = keyboard.Listener(
         on_press=on_press)
     listener.start()
-    
-    #Create keyboard controller
-    controller = XboxController()
-    
-    #Load in a model
-    MODEL_PATH = 'models\\trained_model_1609697904.8732946.obj'
-    MODEL = torch.load(MODEL_PATH).eval()
-    
-    #Initialize hidden input
-    hidden = None  
-    data = []
-    
-    #while the listener is running
-    try:
-        while listener.running:
-            #generate random number for time interval between 5-8 seconds
-            time_to_control = randint(TIME_LB, TIME_UB)
-            loop_start = time()
-            warned = False
-            
-            print(f'You will have {time_to_control} seconds!')
-            
-            print('DaiLE\'s turn!')
-            #give control to DaiLE
-            while time()-loop_start < time_to_control:
-                #Do DaiLE things (pressing keys, being scared of grass, etc.)
-                hidden, _ = DaiLE.run_action_loop(MODEL, hidden, window)
-                
-                if ((time()-loop_start >= time_to_control-1) and warned == False):
-                    warned = True
-                    print('Get ready!')
-                
-            loop_start = time()
-            print('Your turn!')
-                
-            #give control to player
-            while time()-loop_start < time_to_control:
-                #Keep on updating the hidden state for DaiLE so he doesn't forget
-                #context when we hand control back over to him
-                hidden, _ = DaiLE.run_action_loop(MODEL, hidden, window, fps_target=None, take_action=False)
-                #Record player screen and inputs
-                new_data = record_data.sample_data(controller.read(), target_fps=None)
-                data.append(new_data)
-                
-            record_data.save_data(data)
-            data = []
-                             
-    except:
-        pass
-    
-    cv.destroyAllWindows()
-        
-        
+
+    all_data = []
+    while listener.running:
+        data, recorder = main_loop(listener)
+        all_data.append(data)
+
+    for collection_period in range(len(all_data)):
+        if len(all_data[collection_period]) >= 256:
+            recorder.save_data(all_data[collection_period])
+
+    recorder.stop()

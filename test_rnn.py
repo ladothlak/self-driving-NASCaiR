@@ -61,9 +61,8 @@ class Resnt18Rnn(nn.Module):
         
         return out
     
-    def predict(self, x, tel, hidden=None):
-        torch.no_grad()
-        
+    @torch.no_grad()
+    def predict(self, x, tel, hidden=None):        
         b_z, ts, c, h, w = x.shape
         ii = 0
         
