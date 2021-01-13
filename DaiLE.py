@@ -253,7 +253,7 @@ if __name__ == '__main__':
             DaiLE.run_action_loop()
             # DaiLE.diagnose_gamepad()
     except:
-        pass
+        del DaiLE
 
     print('Done.')
 

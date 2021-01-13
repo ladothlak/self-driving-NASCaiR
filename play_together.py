@@ -14,16 +14,17 @@ import record_data
 import sys
 import pyvjoy
 import numpy as np
+import warnings
 
 from pynput import keyboard
-from time import time
+from time import time, sleep
 from XboxController import XboxController
 from assetto_corsa_telemetry_reader import AssettoCorsaData
 
 
-def DaiLE_loop(model_path, data_recorder, controller):
+def DaiLE_loop(model_path, controller, listener):
     DaiLE_obj = DaiLE(model_path, fps_target=None,
-                      debug_mode=True, lightweight_mode=True)
+                      debug_mode=False, lightweight_mode=True)
     RT, LT = 0, 0
     data = []
 
@@ -35,6 +36,7 @@ def DaiLE_loop(model_path, data_recorder, controller):
         model_inputs, screenshot, telemetry = DaiLE_obj.run_action_loop()
 
         new_data = [screenshot, model_inputs, telemetry]
+
         data.append(new_data)
 
         if len(data) >= 60:
@@ -43,25 +45,23 @@ def DaiLE_loop(model_path, data_recorder, controller):
     return data, DaiLE_obj._return_controller()
 
 
-def main_loop(listener):
+def main_loop(listener, model_path):
     # Get window to control
     window = 'Assetto Corsa'
 
     # Create controller object to check state of player controller
     controller = XboxController()
-    recorder = record_data.data_recorder(window, controller, async_sample=True)
-
-    # Load in a model
-    MODEL_PATH = 'models\\trained_model_1610148993.9142728.obj'
 
     try:
         print('DaiLE\'s turn!')
         # give control to DaiLE
-        data, j = DaiLE_loop(MODEL_PATH, recorder, controller)
+
+        data, j = DaiLE_loop(MODEL_PATH, controller, listener)
 
         print('Interrupting DaiLE!')
 
-        loop_start = time()-0.05
+        recorder = record_data.data_recorder(window, controller, async_sample=True)
+        loop_start = time()
         # give control to player
         while ((len(data) < 300) and listener.running):
 
@@ -72,7 +72,7 @@ def main_loop(listener):
             # Record player screen and inputs
             if fps <= 15:
                 data.append(recorder.package_data(scale_speed=True))
-                loop_start = time()-.05
+                loop_start = time()
 
             if(len(data) == 256):
                 print('Reset inputs now')
@@ -83,8 +83,14 @@ def main_loop(listener):
         j.update()
 
         controller.stop()
+        sleep(1)
 
-        return data[:256], recorder
+        if not listener.running:
+            return data[:256], recorder
+        else:
+            recorder.stop()
+            del recorder
+            return data[:256], ''
 
     except:
         print("Unexpected error:", sys.exc_info())
@@ -99,6 +105,7 @@ def main_loop(listener):
 
 
 if __name__ == "__main__":
+    warnings.simplefilter("ignore")
 
     def on_press(key):
         if key == keyboard.Key.f10:
@@ -109,13 +116,17 @@ if __name__ == "__main__":
         on_press=on_press)
     listener.start()
 
+    # Load in a model
+    MODEL_PATH = 'models\\trained_model_1610237203.9295883.obj'
+
     all_data = []
     while listener.running:
-        data, recorder = main_loop(listener)
+        data, recorder = main_loop(listener, MODEL_PATH)
         all_data.append(data)
 
     for collection_period in range(len(all_data)):
         if len(all_data[collection_period]) >= 256:
             recorder.save_data(all_data[collection_period])
 
-    recorder.stop()
+    print('Stopping recorder')
+    del recorder

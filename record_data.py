@@ -1,9 +1,10 @@
 from pynput import keyboard
 import numpy as np
 import os
+import shutil
 import threading
 
-from time import time
+from time import time, sleep
 from PIL import Image
 from screenshot import take_screenshot
 from assetto_corsa_telemetry_reader import AssettoCorsaData
@@ -32,9 +33,14 @@ class data_recorder():
 
         self.async_sample = async_sample
         self._is_running = True
+        self._pause_acquisition = False
 
         # Keep track of when we took our last sample
         self.last_sample_time = time()
+
+        self.screenshot = np.zeros((720, 1280, 3))
+        self.input_for_screenshot = [0, 0, 0]
+        self.speed, self.steering_angle = [0, 0]
 
         if self.async_sample:
             self._sample_thread = threading.Thread(
@@ -42,19 +48,21 @@ class data_recorder():
             self._sample_thread.daemon = True
             self._sample_thread.start()
 
-        self.speed = 0
-        self.steering_angle = 0
-        self.screenshot = []
-        self.input_for_screenshot = [0, 0, 0]
-
     def __del__(self):
         self.stop()
 
     def stop(self):
         self._is_running = False
         self._sample_thread.join()
-
         print('Recorder thread closed')
+
+    def resume(self):
+        self._pause_acquisition = False
+        print('Data acquisition resumed')
+
+    def pause(self):
+        self._pause_acquisition = True
+        print('Data acquisition paused')
 
     def time_to_loop(self, loop_time):
         fps = 1 / (time() - loop_time-0.0000001)
@@ -74,7 +82,10 @@ class data_recorder():
         while self._is_running:
             # For asyncronous, wait until just about Nyquist frequency to try sampling again
             # For syncronous, just let sample_data do its thing
-            if ((self.time_to_loop(self.last_sample_time) <= 2*self.target_fps+5) or not (self.async_sample)):
+            if ((self.time_to_loop(self.last_sample_time) <= 2*self.target_fps) or not (self.async_sample)):
+                # If we've decided to pause acquisition, just keep looping here rather than using resources
+                while self._pause_acquisition:
+                    sleep(0.1)
                 # Reset our last sample time
                 self.last_sample_time = time()
 
@@ -101,6 +112,7 @@ class data_recorder():
         return new_data
 
     def save_data(self, data):
+        self.pause()
         print('Saving...')
         save_time = time()
         # Make directory structure
@@ -109,21 +121,30 @@ class data_recorder():
         os.mkdir(f'{self.full_path}\\{save_time}\\input')
         os.mkdir(f'{self.full_path}\\{save_time}\\telemetry')
         # Save each data point we've collected
-        for point in range(len(data)):
-            # img_to_save = cv.cvtColor(data[point][0], cv.COLOR_BGR2RGB)
-            img_to_save = data[point][0]
-            input_to_save = data[point][1]
-            telemetry_to_save = data[point][2]
-            filename = f'{save_time}_{point}'
+        try:
+            for point in range(len(data)):
+                # img_to_save = cv.cvtColor(data[point][0], cv.COLOR_BGR2RGB)
+                img_to_save = data[point][0]
+                input_to_save = np.array(data[point][1])
+                telemetry_to_save = np.array(data[point][2])
+                filename = f'{save_time}_{point}'
 
-            Image.fromarray(img_to_save).resize([640, 360]).save(
-                f'{self.full_path}\\{save_time}\\img\\{filename}.jpg')
-            np.save(f'{self.full_path}\\{save_time}\\input\\{filename}',
-                    np.array(input_to_save))
-            np.save(f'{self.full_path}\\{save_time}\\telemetry\\{filename}',
-                    np.array(telemetry_to_save))
+                Image.fromarray(img_to_save).resize([640, 360]).save(
+                    f'{self.full_path}\\{save_time}\\img\\{filename}.jpg')
+                np.save(f'{self.full_path}\\{save_time}\\input\\{filename}',
+                        input_to_save)
+                np.save(f'{self.full_path}\\{save_time}\\telemetry\\{filename}',
+                        telemetry_to_save)
 
-        print('Data collection successful!')
+            print('Data collection successful!')
+
+        except:
+            print('Something went wrong...')
+
+            try:
+                shutil.rmtree(f'{self.full_path}\\{save_time}')
+            except:
+                print('Couldn\'t remove corrupted directory')
 
 
 if __name__ == "__main__":
