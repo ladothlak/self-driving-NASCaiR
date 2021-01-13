@@ -54,23 +54,20 @@ class VideoDataset(Dataset):
             
         for p2i, p2l, p2t in list(zip(temp_path2imgs, temp_path2labels, temp_path2telemetry)):
             frame = Image.open(p2i)
-            label = np.load(p2l)
-            telemetry = np.load(p2t)
+            label = torch.as_tensor(np.load(p2l), dtype=torch.float16)
+            telemetry = torch.as_tensor(np.load(p2t), dtype=torch.float16)
             
             if horizontal_flip >= 0.5:
-                #frame = transforms.functional.hflip(frame)
-                #label[0] = label[0]*-1
-                #telemetry[1] = telemetry[1]*-1
+                frame = transforms.functional.hflip(frame)
+                label[0] = label[0]*-1
+                telemetry[1] = telemetry[1]*-1
                 pass
 
             
-            frames_tr.append(self.transform(frame))
+            frames_tr.append(self.transform(frame).type(torch.FloatTensor))
             labels.append(label)
             telemetries.append(telemetry)
             
-        if len(frames_tr)>0:
-            frames_tr = torch.stack(frames_tr)
-            
-        return frames_tr, telemetries, labels
+        return torch.stack(frames_tr), torch.stack(telemetries), torch.stack(labels)
 
 

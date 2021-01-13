@@ -12,6 +12,8 @@ from time import time
 
 #Clear out any memory in use
 torch.cuda.empty_cache()
+torch.backends.cudnn.benchmark = True
+device = torch.device('cuda')
 
 #Model params
 MEAN = [0.485, 0.456, 0.406]
@@ -19,9 +21,10 @@ STD = [0.229, 0.224, 0.225]
 DIMS = [224, 224]
 SEQUENCE_LENGTH = 60
 BATCH_SIZE = 16
-EPOCHS = 5
+ACC_GRAD_BATCHES = 4
+EPOCHS = 3
 IMAGES_TO_PREDICT = 10
-NUM_WORKERS = 3
+NUM_WORKERS = 4
 
 params_model={
         "num_classes": 3,
@@ -32,11 +35,10 @@ params_model={
         "num_telemetry_data_pts":2,
         "images_to_predict":IMAGES_TO_PREDICT}
 
-MODEL = Resnt18Rnn(params_model).train()
+MODEL = Resnt18Rnn(params_model).train().cuda()
 CRITERION = nn.MSELoss()
-OPTIMIZER = optim.RMSprop(MODEL.parameters(), lr=1e-3)
-
-device = torch.device('cuda')
+OPTIMIZER = optim.AdamW(MODEL.parameters())
+SCALER = torch.cuda.amp.GradScaler()
 
 #Get path to data directories
 full_path = 'D:\\UsersRedirect\\Josh Cardosi\\Desktop\\Code\\TrackMania Driver'
@@ -69,9 +71,9 @@ print(f'Sequences: {len(train_ds)}, Total Batches: {len(train_ds)//BATCH_SIZE}')
 def collate_fn_rnn(batch):
     imgs_batch, tel_batch, label_batch = list(zip(*batch))
     
-    imgs_batch = [imgs for imgs in imgs_batch if len(imgs)>0]
-    tel_batch = [torch.tensor(t) for t, imgs in zip(tel_batch, imgs_batch) if len(imgs)>0]
-    label_batch = [torch.tensor(l).double() for l, imgs in zip(label_batch, imgs_batch) if len(imgs)>0]
+    #imgs_batch = [imgs for imgs in imgs_batch if len(imgs)>0]
+    #tel_batch = [torch.from_numpy(t, device=device) for t, imgs in zip(tel_batch, imgs_batch) if len(imgs)>0]
+    #label_batch = [torch.from_numpy(l, device=device).double() for l, imgs in zip(label_batch, imgs_batch) if len(imgs)>0]
     
     imgs_tensor = torch.stack(imgs_batch)
     tel_tensor = torch.stack(tel_batch)
@@ -79,17 +81,17 @@ def collate_fn_rnn(batch):
     return imgs_tensor, tel_tensor, labels_tensor
 
 train_dl = torch.utils.data.DataLoader(train_ds, batch_size=BATCH_SIZE,
-                          shuffle=True, collate_fn=collate_fn_rnn,
-                          pin_memory=True, num_workers=NUM_WORKERS)
+                          shuffle=True, pin_memory=True,
+                          num_workers=NUM_WORKERS)#, collate_fn=collate_fn_rnn)
 
 #Define the training loop
-def train(model, epochs, loss_fn, optimizer, train_loader):
+def train(model, epochs, loss_fn, optimizer, scaler, train_loader):
     #Train that bad boy
     loss_history = []
     
     print(device)
-    model.to(device, non_blocking=True)
-    model.train()
+
+    model.zero_grad()
     
     try:
         for epoch in range(1,epochs+1):
@@ -99,23 +101,27 @@ def train(model, epochs, loss_fn, optimizer, train_loader):
             for batch, (x,z,y) in enumerate(train_loader):
                 
                 x = x.to(device, non_blocking=True)
-                z = z.type(torch.FloatTensor).to(device, non_blocking=True)
-                y = (y.type(torch.FloatTensor).to(device, non_blocking=True))
+                z = z.to(device, non_blocking=True)
+                y = y.to(device, non_blocking=True)
                 
-                model.zero_grad()
+                with torch.cuda.amp.autocast():
+                    loss = loss_fn(model.forward(x, z), y[:,-1,:])
                 
-                loss = loss_fn(model.forward(x, z), y[:,-1,:])
-                
-                loss.backward()
+                #loss.backward()
+                scaler.scale(loss).backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 5)
-                optimizer.step()
                 
-                loss_history.append(loss.detach().cpu().item())
+                #optimizer.step()
                 
-                if batch%10 == 0:
-                    torch.cuda.empty_cache()
+                loss_history.append(loss.detach())
+                
+                if batch%ACC_GRAD_BATCHES == 0:
+                    scaler.step(optimizer)
+                    scaler.update()
+                    model.zero_grad()
+                    
                     now = time()
-                    print(f'{now-start_epoch} elapsed')
+                    print(f'{round(now-start_epoch, 2)} elapsed')
                     print(batch, round(loss.data.item(),5))
                 
             print(f'Epoch time: {time()-start_epoch}')
@@ -162,16 +168,16 @@ def dump_tensors(gpu_only=True):
 #dump_tensors()
 
 if __name__ == '__main__':
-    if True:
+    if False:
         try:
-            MODEL = torch.load('models\\trained_model_1610188710.394599.obj')
+            MODEL = torch.load('models\\trained_model_1610237203.9295883.obj')
             print('Successfully loaded previous model')
         except:
             pass
     
     torch.cuda.empty_cache()
     
-    trained_model = train(MODEL, EPOCHS, CRITERION, OPTIMIZER, train_dl)
+    trained_model = train(MODEL, EPOCHS, CRITERION, OPTIMIZER, SCALER, train_dl)
     
     torch.save(trained_model, f'models\\trained_model_{time()}.obj')
     
